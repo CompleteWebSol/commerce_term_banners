@@ -1,0 +1,85 @@
+<?php
+/**
+ * Created by PhpStorm.
+ * User: Matt
+ * Date: 4/29/2016
+ * Time: 12:30 PM
+ */
+/**
+ *  Implements hook_block_info().
+ */
+function commerce_term_banners_block_info() {
+  $blocks = array();
+  $blocks['term_banner'] = array(
+    'info' => t('Term Banners'),
+    'cache' => DRUPAL_NO_CACHE,
+  );
+  return $blocks;
+}
+
+/**
+ *  Implements hook_block_view().
+ */
+function commerce_term_banners_block_view($delta = '') {
+  $block = array();
+  switch($delta)
+  {
+    case 'term_banner':
+      $block['content'] = _commerce_term_banners_block();
+  }
+  return $block;
+}
+
+function _commerce_term_banners_block() {
+  // are we on product search page?
+  $views_page = views_get_page_view();
+  if(!is_object($views_page) || $views_page->name!='products') {
+    return null;
+  }
+  $tid=0;
+  $parts = explode('/',current_path());
+  $term_name = $parts[count($parts)-1];
+
+  $vocab = $parts[count($parts)-2];
+  $vocabulary = taxonomy_vocabulary_machine_name_load($vocab);
+  if($vocabulary==false) {
+    return '';
+  }
+  $terms = entity_load('taxonomy_term', FALSE, array('vid' => $vocabulary->vid));
+  foreach($terms as $term) {
+    $name = str_replace("'","",$term->name);
+    $name = str_replace(" ","_",$name);
+    $name = strtolower($name);
+    $name = drupal_get_path_alias('taxonomy/term/'.$term->tid);
+    $name = substr($name,strpos($name,'/')+1);
+    if($name == $term_name) {
+      $tid = $term->tid;
+      break;
+    }
+  }
+  if($tid==0) {
+    return '';
+  }
+
+  $term = taxonomy_term_load($tid);
+  $html = '';
+  if(isset($term->field_banner['und'][0]['uri'])) {
+    $image = '<img src="' . file_create_url($term->field_banner['und'][0]['uri']) . '" />';
+    if(isset($term->field_banner_link) && !empty($term->field_banner_link)) {
+      if(isset($term->field_link_target) && !empty($term->field_link_target)) {
+        if($term->field_link_target[LANGUAGE_NONE][0]['value']==1) {
+          $target = '_blank';
+        } else {
+          $target = '_self';
+        }
+      } else {
+        $target = '_self';
+      }
+      $link = l($image,$term->field_banner_link[LANGUAGE_NONE][0]['value'],array('html'=>true,'attributes'=>array('target'=>$target)));
+      $html = $link;
+    } else {
+      $html = $image;
+    }
+  }
+  return $html;
+}
