@@ -14,6 +14,10 @@ function commerce_term_banners_block_info() {
     'info' => t('Term Banners'),
     'cache' => DRUPAL_NO_CACHE,
   );
+  $blocks['term_wide_banner'] = array(
+    'info' => t('Term Wide Banners'),
+    'cache' => DRUPAL_NO_CACHE,
+  );
   return $blocks;
 }
 
@@ -25,12 +29,16 @@ function commerce_term_banners_block_view($delta = '') {
   switch($delta)
   {
     case 'term_banner':
-      $block['content'] = _commerce_term_banners_block();
+      $block['content'] = _commerce_term_banners_block('std');
+      break;
+    case 'term_wide_banner':
+      $block['content'] = _commerce_term_banners_block('wide');
+      break;
   }
   return $block;
 }
 
-function _commerce_term_banners_block() {
+function _commerce_term_banners_block($field = 'std') {
   // are we on product search page?
   $views_page = views_get_page_view();
   if(!is_object($views_page) || $views_page->name!='products') {
@@ -63,21 +71,34 @@ function _commerce_term_banners_block() {
 
   $term = taxonomy_term_load($tid);
   $html = '';
-  if(isset($term->field_banner['und'][0]['uri'])) {
-    $image = '<img src="' . file_create_url($term->field_banner['und'][0]['uri']) . '" />';
-    if(isset($term->field_banner_link) && !empty($term->field_banner_link)) {
-      if(isset($term->field_link_target) && !empty($term->field_link_target)) {
-        if($term->field_link_target[LANGUAGE_NONE][0]['value']==1) {
-          $target = '_blank';
-        } else {
+  if($field=='std') {
+    if (isset($term->field_banner['und'][0]['uri'])) {
+      $image = '<img src="' . file_create_url($term->field_banner['und'][0]['uri']) . '" />';
+      if (isset($term->field_banner_link) && !empty($term->field_banner_link)) {
+        if (isset($term->field_link_target) && !empty($term->field_link_target)) {
+          if ($term->field_link_target[LANGUAGE_NONE][0]['value'] == 1) {
+            $target = '_blank';
+          }
+          else {
+            $target = '_self';
+          }
+        }
+        else {
           $target = '_self';
         }
-      } else {
-        $target = '_self';
+        $link = l($image, $term->field_banner_link[LANGUAGE_NONE][0]['value'], array(
+            'html' => TRUE,
+            'attributes' => array('target' => $target)
+          ));
+        $html = $link;
       }
-      $link = l($image,$term->field_banner_link[LANGUAGE_NONE][0]['value'],array('html'=>true,'attributes'=>array('target'=>$target)));
-      $html = $link;
-    } else {
+      else {
+        $html = $image;
+      }
+    }
+  } elseif($field=='wide') {
+    if (isset($term->field_wide_banner['und'][0]['uri'])) {
+      $image = '<img src="' . file_create_url($term->field_wide_banner['und'][0]['uri']) . '" />';
       $html = $image;
     }
   }
